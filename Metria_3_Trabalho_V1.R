@@ -472,7 +472,7 @@ tabela = tabela[tabela$Converged,]
 
 # Verificar qual modelo escolher
 
-# ARIMA(1,1,2), Invertível e estacionário
+# ARIMA(0,1,3), Invertível 
 
 #Vamos estimá-lo:
 modelo = Arima(janela_u, order =c(0,1,3), include.constant = F, include.drift = T)
