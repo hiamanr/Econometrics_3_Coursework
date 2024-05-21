@@ -1,59 +1,68 @@
-# Coursework - Econometrics 3 ----------------------------------------------------------
-# Authors: Hiaman Santos and João Francisco C. Perez ----------------------------------------------
+# Coursework - Econometrics 3 --------------------------------------------------
+# Authors: Hiaman Santos and João Francisco C. Perez ---------------------------
 
-# Instalando pacotes------------------------------------------------------------
+# Installing packages-----------------------------------------------------------
 # Tidyverse
 #install.packages("tidyverse")
 library(tidyverse)
 
-#Instalando pacotes para decompor e dessazonalizar
+# Installing packages to decompose and deseasonalize data
 #install.packages("seasonal")
 library(seasonal) #Arima X13-Seats
 
 #install.packages("mFilter")
 library(mFilter) #Filtro HP
 
-#Carregando dados disponíveis no pacote URCA
+#URCA package
 #install.packages("urca")
-library("urca")
+library(urca)
 
 #install.packages("forecast")
 library(forecast)
 
 #install.packages("sandwich")
-library(sandwich) #Erros padrão HAC
+library(sandwich) # HAC standard errors
 
 #install.packages("lmtest")
-library(lmtest) #Testes com erros padrão robustos
+library(lmtest) #Robust standard errors
 
 #install.packages("CADFtest")
-library("CADFtest") # testes de raiz unitária
-
-#install.packages("sandwich")
-library("sandwich") #Erros padrão HAC
+library(CADFtest) #uni root tests
 
 #install.packages("car")
-library("car") #Teste de restrições lineares
+library(car) #Linear restriction errors
+
+#install.packages("readxl")
+library(readxl)
 
 #Setting work directory
 
-file_directory <- dirname(rstudioapi::getSourceEditorContext()$path)
+file_directory <- dirname(rstudioapi::getSourceEditorContext()$path) %>%
+  gsub("\\R Code", "", .)
 
 setwd(file_directory)
 
 getwd()
 
-file_path <- file.path(file_directory, "data.xlsx")
-data <- read_excel(file_path)
+folder_path <- "Database\\"
+
+file_path <- paste0(folder_path, "data.xlsx")
+
+data <- read_excel(file_path, col_types = c("text", "numeric", "numeric", "numeric",
+                                            "numeric", "numeric", "numeric"))
 
 
+# Checking data classes
+class(data$Vacancies_mill)
+class(data$EAP_mill)
+class(data$Employed_mill)
+class(data$Unemployed_mill)
+class(data$Unemployment_rate)
+class(data$Vacancies)
 
 # Ex.2.-------------------------------------------------------------------------
 
-# Importing dataset with relevant data from OECD and Destatis.
-
-# Creating new column 
-# Vacancy rate
+# Creating new variable vacancy rate
 
 data$vacancy_rate <- 100*data$Vacancies_mill / data$EAP_mill
 
@@ -100,8 +109,8 @@ linearHypothesis(teste_1$est.model,c("trnd = 0", "L(y, 1) = 0" ))
 # Se chegamos a esta etapa, não temos evidências de que haja uma
 #tendência linear no modelo. 
 
-teste_2 = CADFtest(Vacancy_rate, type = "drift", max.lag.y = ceiling(12*(length(Vacancy_rate)/100)^(1/4)), 
-                   criterion = "MAIC")
+teste_2 = CADFtest(Vacancy_rate, type = "drift", max.lag.y = 
+                     ceiling(12*(length(Vacancy_rate)/100)^(1/4)), criterion = "MAIC")
 print(teste_2)
 summary(teste_2)
 
@@ -174,7 +183,7 @@ coeftest(modelo, vcov. = vcovHAC)
 
 # Building Saez efficiency measure
 
-#Nível de desemprego eficiente: u = raiz(u*v)
+#Nível de desemprego eficiente: u = sqrt(u*v)
 
 u <- mutate(data, u_star = sqrt((data$vacancy_rate*data$Unemployment_rate)))
 
@@ -183,8 +192,8 @@ u_ts <- ts(u$u_star, start = c(1991,1), frequency = 12)
 plot(u_ts)
 
 
-
-# Repetindo testes para janela até a reforma
+# Uniroot tests-----------------------------------------------------------------
+# Conducting uniroot tests for the period from 1991 to 2002:
 
 #janela_testes <- window(u_ts, end = c(2002,12))
 
@@ -225,8 +234,8 @@ plot(u_ts)
 # Se chegamos a esta etapa, não temos evidências de que haja uma
 #tendência linear no modelo. 
 
-#teste_5 = CADFtest(janela_testes, type = "drift", max.lag.y = ceiling(12*(length(janela_testes)/100)^(1/4)), 
-                   #criterion = "MAIC")
+#teste_5 = CADFtest(janela_testes, type = "drift", 
+#max.lag.y = ceiling(12*(length(janela_testes)/100)^(1/4)), criterion = "MAIC")
 #print(teste_5)
 #summary(teste_5)
 
@@ -294,6 +303,7 @@ plot(u_ts)
 #na série em primeira diferença
 #a 10% (p-valor é de 0.0.04837 < 0.10). 
 
+# Uniroot tests-----------------------------------------------------------------
 # Testes com janela para a variável desemprego eficiente
 
 #Vamos conduzir os testes a 10% de significância
@@ -405,13 +415,11 @@ coeftest(modelo, vcov. = vcovHAC)
 
 
 
-# Reportar que resíduos e trend são semelhantes. E que trend é estatisticamente significnate,
-# Mas não faz muito sentido econômico
+# Reportamos que comportamento das séries para resíduos e trend é semelhante. 
+# Trend é estatisticamente significnate, todavia o valor do coeficiente é baixo.
+# Trend não faz muito sentido econômico.
 
-
-# bOX jENKINS TUDO COM DIFF(U_TS)
-
-# Box Jenkins
+# Box Jenkins para a série u_ts (em primeira diferença)
 
 #Dos testes anteriores, sabemos que a série apresenta raiz unitária, e de:
 trend = 1:(length(u_ts)-1)
@@ -478,6 +486,3 @@ modelo = Arima(janela_u, order =c(0,1,3), include.constant = F, include.drift = 
 summary(modelo)
 
 checkresiduals(modelo)
-
-grafico = forecast(modelo, h=4)
-plot(grafico)
