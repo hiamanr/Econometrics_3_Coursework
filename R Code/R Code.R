@@ -38,6 +38,12 @@ library(readxl)
 #install.packages("ggthemes")
 library(ggthemes)
 
+#install.packages("xtable")
+library(xtable)
+
+#install.packages("clipr")
+library(clipr)
+
 #Setting work directory
 
 file_directory <- dirname(rstudioapi::getSourceEditorContext()$path) %>%
@@ -522,7 +528,7 @@ plot_data <- u %>%
                                  no = forecast_lower),
          forecast_upper_data = ifelse(Date < as.Date("2003-01-01"),
                                  yes = NA,
-                                 no = effect_mean),
+                                 no = forecast_upper),
          effect_mean_data  = ifelse(Date < as.Date("2003-01-01"),
                                       yes = NA,
                                       no = effect_mean),
@@ -562,7 +568,7 @@ ggplot(data = plot_data, aes(x = Date)) +
 #Estimativa do efeito
 
 ggplot(data = plot_data, aes(x = Date)) +
-  geom_line(aes(y = effect_mean_data,  color = "Previsão ARIMA"), size = 1) +
+  geom_line(aes(y = effect_mean_data,  color = "Efeito médio estimado"), size = 1) +
   geom_line(aes(y = effect_lower_data), #color = "lightblue",
             linetype = "dotted", size = 1) +
   geom_line(aes(y = effect_upper_data), #color = "lightblue",
@@ -570,16 +576,24 @@ ggplot(data = plot_data, aes(x = Date)) +
   geom_ribbon(data=subset(plot_data, as.Date("2003-01-01") <= Date & Date <= as.Date("2006-12-01")), 
               aes(ymin=effect_lower_data, ymax=effect_upper_data), 
               fill="grey", alpha=0.5) +
-  scale_x_date(date_breaks = "2 year",
+  scale_x_date(date_breaks = "1 year",
                date_labels = "%Y",
                limits = as.Date(c('2003-01-01','2006-11-01'))) +
   xlab("Ano") +
-  ylab("u* (desemprego eficiente)") +
+  ylab(TeX("$\\alpha_t$")) +
   theme_stata(scheme = "s1color") +
-  theme(legend.title=element_blank()) +
-  ggtitle("Forecast de u* (desemprego eficiente) – ARIMA(0,1,3)")
-  
-  
+  theme(legend.title = element_blank(),
+        axis.title.y = element_text(size=17)) +
+  ggtitle(TeX("Estimativa de $\\alpha_t$"))
+
+
+estimates <- plot_data %>% 
+  select(Date, effect_mean_data, effect_lower_data, effect_upper_data) %>% 
+  filter(month(Date) %in% c(1,6), year(Date) >= 2003) %>% 
+  mutate(Date = format(Date, "%B-%y"))
+
+print(xtable(estimates), type = "latex") %>% 
+  write_clip()
 
 
 
