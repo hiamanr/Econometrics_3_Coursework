@@ -48,7 +48,8 @@ folder_path <- "Database\\"
 
 file_path <- paste0(folder_path, "data.xlsx")
 
-data <- read_excel("data.xlsx", col_types = c("text", "numeric", "numeric", "numeric",
+data <- read_excel(file_path, 
+                   col_types = c("text", "numeric", "numeric", "numeric",
                                             "numeric", "numeric", "numeric"))
 
 
