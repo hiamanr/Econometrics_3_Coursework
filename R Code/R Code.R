@@ -497,12 +497,13 @@ checkresiduals(modelo)
 
 forecast <- forecast(modelo, h = 4*12)
 plot(forecast)
+lines(window(u_ts, start = c(2003, 1)))
 
 #Intervalos de predição para a série em si
 
 forecast_mean  <- ts(forecast$mean, start = c(2003, 1), frequency = 12)
-forecast_lower <- ts(forecast$lower[,2], start = c(2003, 1), frequency = 12)
-forecast_upper <- ts(forecast$upper[,2], start = c(2003, 1), frequency = 12)
+forecast_lower <- ts(forecast$lower[,1], start = c(2003, 1), frequency = 12)
+forecast_upper <- ts(forecast$upper[,1], start = c(2003, 1), frequency = 12)
 
 #Construindo intervalos de predição para o efeito \alpha
 
@@ -521,23 +522,62 @@ plot_data <- u %>%
                                  no = forecast_lower),
          forecast_upper_data = ifelse(Date < as.Date("2003-01-01"),
                                  yes = NA,
-                                 no = forecast_upper),
+                                 no = effect_mean),
+         effect_mean_data  = ifelse(Date < as.Date("2003-01-01"),
+                                      yes = NA,
+                                      no = effect_mean),
+         effect_lower_data = ifelse(Date < as.Date("2003-01-01"),
+                                      yes = NA,
+                                      no = effect_lower),
+         effect_upper_data = ifelse(Date < as.Date("2003-01-01"),
+                                      yes = NA,
+                                      no = effect_upper),
          u_star_data = u_star) %>%
   filter(Date < as.Date("2007-01-01"))
 
 
+#Gráfico do forecast mais bonitinho
+
 ggplot(data = plot_data, aes(x = Date)) +
   geom_line(aes(y = u_star_data, color = "u*")) +
-  geom_line(aes(y = forecast_mean_data,  color = "Forecasting contrafactual"), 
-            linetype = "dotted") +
+  geom_line(aes(y = forecast_mean_data,  color = "Previsão ARIMA"), size = 1) +
   geom_line(aes(y = forecast_lower_data), #color = "lightblue",
-            linetype = "dotted") +
+            linetype = "dotted", size = 1) +
   geom_line(aes(y = forecast_upper_data), #color = "lightblue",
-            linetype = "dotted") +
-  scale_x_date(date_breaks = "1 year",
+            linetype = "dotted", size = 1) +
+  geom_ribbon(data=subset(plot_data, as.Date("2003-01-01") <= Date & Date <= as.Date("2006-12-01")), 
+              aes(ymin=forecast_lower_data, ymax=forecast_upper_data), 
+              fill="grey", alpha=0.5) +
+  scale_x_date(date_breaks = "2 year",
                date_labels = "%Y",
                limits = as.Date(c('1991-01-01','2006-11-01'))) +
-  theme_stata(scheme = "s1color")
+  xlab("Ano") +
+  ylab("u* (desemprego eficiente)") +
+  theme_stata(scheme = "s1color") +
+  theme(legend.title=element_blank()) +
+  ggtitle("Forecast de u* (desemprego eficiente) – ARIMA(0,1,3)")
+
+
+
+#Estimativa do efeito
+
+ggplot(data = plot_data, aes(x = Date)) +
+  geom_line(aes(y = effect_mean_data,  color = "Previsão ARIMA"), size = 1) +
+  geom_line(aes(y = effect_lower_data), #color = "lightblue",
+            linetype = "dotted", size = 1) +
+  geom_line(aes(y = effect_upper_data), #color = "lightblue",
+            linetype = "dotted", size = 1) +
+  geom_ribbon(data=subset(plot_data, as.Date("2003-01-01") <= Date & Date <= as.Date("2006-12-01")), 
+              aes(ymin=effect_lower_data, ymax=effect_upper_data), 
+              fill="grey", alpha=0.5) +
+  scale_x_date(date_breaks = "2 year",
+               date_labels = "%Y",
+               limits = as.Date(c('2003-01-01','2006-11-01'))) +
+  xlab("Ano") +
+  ylab("u* (desemprego eficiente)") +
+  theme_stata(scheme = "s1color") +
+  theme(legend.title=element_blank()) +
+  ggtitle("Forecast de u* (desemprego eficiente) – ARIMA(0,1,3)")
   
   
 
