@@ -48,7 +48,7 @@ folder_path <- "Database\\"
 
 file_path <- paste0(folder_path, "data.xlsx")
 
-data <- read_excel(file_path, col_types = c("text", "numeric", "numeric", "numeric",
+data <- read_excel("data.xlsx", col_types = c("text", "numeric", "numeric", "numeric",
                                             "numeric", "numeric", "numeric"))
 
 
@@ -486,3 +486,56 @@ modelo = Arima(janela_u, order =c(0,1,3), include.constant = F, include.drift = 
 summary(modelo)
 
 checkresiduals(modelo)
+
+
+#Usaremos agora o modelo estimado até 2002 para fazer previsões contrafactuais
+#após a reforma (jan-2003 a dez-2006)
+
+forecast <- forecast(modelo, h = 3*12)
+plot(forecast)
+
+#Intervalos de predição para a série em si
+
+forecast_mean  <- ts(forecast$mean, start = c(2003, 1), frequency = 12)
+forecast_lower <- ts(forecast$lower[,2], start = c(2003, 1), frequency = 12)
+forecast_upper <- ts(forecast$upper[,2], start = c(2003, 1), frequency = 12)
+
+#Construindo intervalos de predição para o efeito \alpha
+
+effect_mean  <- window(u_ts, start = c(2003, 1)) - forecast_mean
+effect_lower <- window(u_ts, start = c(2003, 1)) - forecast_upper
+effect_upper <- window(u_ts, start = c(2003, 1)) - forecast_lower
+
+plot_data <- u %>% 
+  mutate(Date =as.Date(paste(Date, "01", sep = "-"), 
+                       format = "%Y-%b-%d")) %>% 
+  mutate(forecast_mean  = ifelse(Date < as.Date("2003-01-01"),
+                              yes = NA,
+                              no = forecast_mean),
+         forecast_lower = ifelse(Date < as.Date("2003-01-01"),
+                                 yes = NA,
+                                 no = forecast_lower),
+         forecast_upper = ifelse(Date < as.Date("2003-01-01"),
+                                 yes = NA,
+                                 no = forecast_upper)) %>% 
+  filter(Date < as.Date("2007-01-01"))
+
+
+ggplot(data = plot_data, aes(x = Date)) +
+  geom_line(aes(y = u_star, color = "u*")) +
+  geom_line(aes(y = forecast_mean,  color = "Forecasting contrafactual"), 
+            linetype = "dotted") +
+  geom_line(aes(y = forecast_lower), #color = "lightblue",
+            linetype = "dotted") +
+  geom_line(aes(y = forecast_upper), #color = "lightblue",
+            linetype = "dotted") +
+  theme_stata(scheme = "s1color")
+  
+  
+
+
+
+
+
+
+
